@@ -7,6 +7,8 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"math"
+	"math/big"
 )
 
 // Block keeps block headers
@@ -17,11 +19,35 @@ type Block struct {
 	Hash          []byte
 }
 
+// HashTransactions returns a hash of the transactions in the block
+func (b *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	var txHash [32]byte
+
+	for _, tx := range b.Transactions {
+		txHashes = append(txHashes, tx.ID)
+	}
+	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+
+	return txHash[:]
+}
+
+func (b *Block) prepareData() []byte {
+	data := bytes.Join(
+		[][]byte{
+			b.PrevBlockHash,
+			b.HashTransactions(),
+			IntToHex(b.Timestamp),
+		},
+		[]byte{},
+	)
+	return data
+}
+
 // SetHash calculates and sets block hash
 func (b *Block) SetHash() {
-	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
-	headers := bytes.Join([][]byte{b.PrevBlockHash, b.Data, timestamp}, []byte{})
-	hash := sha256.Sum256(headers)
+	data := b.prepareData()
+	hash := sha256.Sum256(data)
 	b.Hash = hash[:]
 }
 
