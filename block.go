@@ -5,10 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"log"
-	"strconv"
 	"time"
-	"math"
-	"math/big"
 )
 
 // Block keeps block headers
