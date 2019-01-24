@@ -9,8 +9,6 @@ import (
 	"log"
 )
 
-const subsidy = 10
-
 // Transaction represents a Bitcoin transaction
 type Transaction struct {
 	ID   []byte
@@ -61,13 +59,14 @@ func (out *TXOutput) CanBeUnlockedWith(unlockingData string) bool {
 }
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to, data string) *Transaction {
+func NewCoinbaseTX(to, data string,value int) *Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Reward to '%s'", to)
 	}
 
 	txin := TXInput{[]byte{}, -1, data}
-	txout := TXOutput{subsidy, to}
+	txout := TXOutput{value, to}
+
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{txout}}
 	tx.SetID()
 

@@ -8,6 +8,7 @@ import (
 	"os"
 )
 
+const subsidy = 10
 const dbFile = "blockchain.db"
 const blocksBucket = "blocks"
 const genesisCoinbaseData = "Hi there... My name is Hans Tananda :)"
@@ -141,7 +142,7 @@ func CreateBlockchain(address string) *Blockchain {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
+		cbtx := NewCoinbaseTX(address, genesisCoinbaseData,subsidy)
 		genesis := NewGenesisBlock(cbtx)
 
 		b, err := tx.CreateBucket([]byte(blocksBucket))

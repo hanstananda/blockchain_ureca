@@ -38,6 +38,7 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  createblockchain -address ADDRESS - Create a blockchain and send genesis block reward to ADDRESS")
 	fmt.Println("  printchain - Print all the blocks of the blockchain")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT - Send AMOUNT of coins from FROM address to TO")
+	fmt.Println("  generate -to TO -data DATA -amount AMOUNT - Generate AMOUNT of coins to TO with additional information to be put  on DATA")
 }
 
 
@@ -77,6 +78,15 @@ func (cli *CLI) send(from, to string, amount int) {
 	fmt.Println("Success!")
 }
 
+func (cli *CLI) generate(to,data string, amount int) {
+	bc := NewBlockchain(to)
+	defer bc.db.Close()
+
+	tx := NewCoinbaseTX(to, data, amount)
+	bc.NewBlock([]*Transaction{tx})
+	fmt.Println("Success!")
+}
+
 // Run parses command line arguments and processes commands
 func (cli *CLI) Run() {
 	cli.validateArgs()
@@ -85,12 +95,16 @@ func (cli *CLI) Run() {
 	createBlockchainCmd := flag.NewFlagSet("createblockchain", flag.ExitOnError)
 	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
+	generateCmd := flag.NewFlagSet("generate", flag.ExitOnError)
 
 	getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
 	createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
 	sendFrom := sendCmd.String("from", "", "Source wallet address")
 	sendTo := sendCmd.String("to", "", "Destination wallet address")
 	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
+	data := generateCmd.String("data","","additional information")
+	generateTo := generateCmd.String("to","","Destination wallet address")
+	generateAmount := generateCmd.Int("amount", 0, "Amount to generate")
 
 	switch os.Args[1] {
 	case "getbalance":
@@ -110,6 +124,11 @@ func (cli *CLI) Run() {
 		}
 	case "send":
 		err := sendCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
+	case "generate":
+		err := generateCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)
 		}
@@ -145,5 +164,13 @@ func (cli *CLI) Run() {
 		}
 
 		cli.send(*sendFrom, *sendTo, *sendAmount)
+	}
+
+	if generateCmd.Parsed(){
+		if *data == "" || *generateTo == "" || *generateAmount <= 0 {
+			generateCmd.Usage()
+			os.Exit(1)
+		}
+		cli.generate(*generateTo,*data,*generateAmount)
 	}
 }

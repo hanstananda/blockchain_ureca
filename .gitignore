@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+blockchain_ureca
 
 # Test binary, build with `go test -c`
 *.test
@@ -17,5 +18,3 @@
 # Local config and blockchain file
 *.db
 *.dat
-
-blockchain_ureca
