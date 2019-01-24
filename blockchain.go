@@ -57,7 +57,7 @@ func (i *BlockchainIterator) Next() *Block {
 }
 
 // NewBlock creates a new block with the provided transactions
-func (bc *Blockchain) NewBlock(transactions []*Transaction) {
+func (bc *Blockchain) NewBlock(transactions []*Transaction) *Block {
 	var lastHash []byte
 
 	for _, tx := range transactions {
@@ -95,6 +95,7 @@ func (bc *Blockchain) NewBlock(transactions []*Transaction) {
 
 		return nil
 	})
+	return newBlock
 }
 
 
@@ -108,7 +109,7 @@ func dbExists() bool {
 
 
 // NewBlockchain creates a new Blockchain with genesis Block
-func NewBlockchain(address string) *Blockchain {
+func NewBlockchain() *Blockchain {
 	if dbExists() == false {
 		fmt.Println("No existing blockchain found. Create one first.")
 		os.Exit(1)
@@ -181,6 +182,52 @@ func CreateBlockchain(address string) *Blockchain {
 
 	return &bc
 }
+
+
+// FindUTXO finds all unspent transaction outputs and returns transactions with spent outputs removed
+func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
+	UTXO := make(map[string]TXOutputs)
+	spentTXOs := make(map[string][]int)
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Transactions {
+			txID := hex.EncodeToString(tx.ID)
+
+		Outputs:
+			for outIdx, out := range tx.Vout {
+				// Was the output spent?
+				if spentTXOs[txID] != nil {
+					for _, spentOutIdx := range spentTXOs[txID] {
+						if spentOutIdx == outIdx {
+							continue Outputs
+						}
+					}
+				}
+
+				outs := UTXO[txID]
+				outs.Outputs = append(outs.Outputs, out)
+				UTXO[txID] = outs
+			}
+
+			if tx.IsCoinbase() == false {
+				for _, in := range tx.Vin {
+					inTxID := hex.EncodeToString(in.Txid)
+					spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
+				}
+			}
+		}
+
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return UTXO
+}
+
 
 // FindTransaction finds a transaction by its ID
 func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {

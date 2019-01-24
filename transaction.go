@@ -43,10 +43,16 @@ func (tx *Transaction) SetID() {
 // NewCoinbaseTX creates a new coinbase transaction
 func NewCoinbaseTX(to, data string,value int) *Transaction {
 	if data == "" {
-		data = fmt.Sprintf("Reward to '%s'", to)
+		randData := make([]byte, 20)
+		_, err := rand.Read(randData)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		data = fmt.Sprintf("%x", randData)
 	}
 
-	txin := TXInput{[]byte{}, -1, data}
+	txin := TXInput{[]byte{}, -1,nil, []byte(data)}
 	txout := TXOutput{value, to}
 
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{txout}}
@@ -96,6 +102,19 @@ func NewUTXOTransaction(from, to string, amount int, UTXOSet *UTXOSet) *Transact
 	UTXOSet.Blockchain.SignTransaction(&tx, wallet.PrivateKey)
 
 	return &tx
+}
+
+// Serialize returns a serialized Transaction
+func (tx Transaction) Serialize() []byte {
+	var encoded bytes.Buffer
+
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(tx)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return encoded.Bytes()
 }
 
 
