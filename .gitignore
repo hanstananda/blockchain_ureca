@@ -13,3 +13,7 @@
 
 # IDE
 .idea/
+
+# Local config and blockchain file
+*.db
+*.dat
