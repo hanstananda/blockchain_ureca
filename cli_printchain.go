@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-func (cli *CLI) printChain() {
-	bc := NewBlockchain()
+func (cli *CLI) printChain(nodeID string) {
+	bc := NewBlockchain(nodeID)
 	defer bc.db.Close()
 
 	bci := bc.Iterator()
