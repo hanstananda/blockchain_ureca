@@ -19,6 +19,7 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  listaddresses - Lists all addresses from the wallet file")
 	fmt.Println("  printchain - Print all the blocks of the blockchain")
 	fmt.Println("  reindexutxo - Rebuilds the UTXO set")
+	fmt.Println("  send -from FROM -to TO -amount AMOUNT - Send AMOUNT of coins from FROM address to TO")
 	fmt.Println("  generate -to TO -amount AMOUNT - Generate AMOUNT of coins to TO ")
 }
 
