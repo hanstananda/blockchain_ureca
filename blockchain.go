@@ -98,8 +98,7 @@ func (bc *Blockchain) NewBlock(transactions []*Transaction) *Block {
 	return newBlock
 }
 
-
-func dbExists() bool {
+func dbExists(dbFile string) bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 		return false
 	}
@@ -107,10 +106,10 @@ func dbExists() bool {
 	return true
 }
 
-
 // NewBlockchain creates a new Blockchain with genesis Block
-func NewBlockchain() *Blockchain {
-	if dbExists() == false {
+func NewBlockchain(nodeID string) *Blockchain {
+	dbFile := fmt.Sprintf(dbFile, nodeID)
+	if dbExists(dbFile) == false {
 		fmt.Println("No existing blockchain found. Create one first.")
 		os.Exit(1)
 	}
@@ -127,7 +126,6 @@ func NewBlockchain() *Blockchain {
 
 		return nil
 	})
-
 	if err != nil {
 		log.Panic(err)
 	}
@@ -139,8 +137,9 @@ func NewBlockchain() *Blockchain {
 
 
 // CreateBlockchain creates a new blockchain DB
-func CreateBlockchain(address string) *Blockchain {
-	if dbExists() {
+func CreateBlockchain(address, nodeID string) *Blockchain {
+	dbFile := fmt.Sprintf(dbFile, nodeID)
+	if dbExists(dbFile) {
 		fmt.Println("Blockchain already exists.")
 		os.Exit(1)
 	}
