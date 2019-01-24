@@ -21,6 +21,8 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  reindexutxo - Rebuilds the UTXO set")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT - Send AMOUNT of coins from FROM address to TO")
 	fmt.Println("  generate -to TO -amount AMOUNT - Generate AMOUNT of coins to TO ")
+	fmt.Println("  startnode - Start a node with ID specified in NODE_ID env.")
+
 }
 
 
@@ -35,6 +37,10 @@ func (cli *CLI) validateArgs() {
 func (cli *CLI) Run() {
 	cli.validateArgs()
 	nodeID := os.Getenv("NODE_ID")
+	if nodeID == "" {
+		fmt.Printf("NODE_ID env. var is not set!")
+		os.Exit(1)
+	}
 
 	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
 	createBlockchainCmd := flag.NewFlagSet("createblockchain", flag.ExitOnError)

@@ -60,7 +60,7 @@ func gobEncode(data interface{}) []byte {
 	return buff.Bytes()
 }
 
-func sendData(a string, data []byte) {
+func sendData(data []byte) {
 	addr, err := net.ResolveUDPAddr(protocol, knownNodes[0])
 	conn, err := net.DialUDP(protocol,nil, addr)
 	if err != nil {
@@ -75,12 +75,12 @@ func sendData(a string, data []byte) {
 	}
 }
 
-func sendTx(addr string, tnx *Transaction) {
+func sendTx(tnx *Transaction) {
 	data := tx{nodeAddress, tnx.Serialize()}
 	payload := gobEncode(data)
 	request := append(commandToBytes("tx"), payload...)
 
-	sendData(addr, request)
+	sendData(request)
 }
 
 // StartServer starts a node
@@ -89,6 +89,23 @@ func StartServer(nodeID string, h func(*net.UDPAddr, int, []byte, *Blockchain)) 
 	addr, err := net.ResolveUDPAddr("udp", knownNodes[0]) // currently will always connect to a udp port
 	if err != nil {
 		log.Panic(err)
+	}
+
+	if(nodeID=="3000")	{
+		bc := NewBlockchain(nodeID)
+		bci := bc.Iterator()
+		for {
+			block := bci.Next()
+
+			for _, tx := range block.Transactions {
+				// send the transactions to all parties in the group
+				sendTx(tx)
+			}
+
+			if len(block.PrevBlockHash) == 0 {
+				break
+			}
+		}
 	}
 
 	ln, err := net.ListenMulticastUDP(protocol,nil, addr)

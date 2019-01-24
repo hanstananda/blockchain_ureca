@@ -12,7 +12,7 @@ import (
 )
 
 const subsidy = 10
-const dbFile = "blockchain.db"
+const dbFile = "blockchain_%s.db"
 const blocksBucket = "blocks"
 const genesisCoinbaseData = "Hi there... My name is Hans Tananda :)"
 
