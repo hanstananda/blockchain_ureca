@@ -53,9 +53,9 @@ func NewCoinbaseTX(to, data string,value int) *Transaction {
 	}
 
 	txin := TXInput{[]byte{}, -1,nil, []byte(data)}
-	txout := TXOutput{value, to}
+	txout := NewTXOutput(value, to)
 
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{txout}}
+	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}}
 	tx.SetID()
 
 	return &tx
