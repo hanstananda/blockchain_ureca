@@ -1,4 +1,4 @@
-# blockchain_ureca
+# Blockchain URECA
 
 ## Setup configuration
 
