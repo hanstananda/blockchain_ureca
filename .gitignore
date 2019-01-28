@@ -17,4 +17,5 @@ blockchain_ureca
 
 # Local config and blockchain file
 *.db
+!blockchain_genesis.db
 *.dat
