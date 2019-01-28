@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (cli *CLI) startNode(nodeID string) {
+func (cli *CLI) startNode(nodeID, portUDP string) {
 	fmt.Printf("Starting node %s\n", nodeID)
-	StartServer(nodeID, handleConnection)
+	StartServer(nodeID, portUDP, handleConnection)
 }

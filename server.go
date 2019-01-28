@@ -16,7 +16,8 @@ const commandLength = 12
 const maxDatagramSize = 8192
 
 var nodeAddress string
-var knownNodes = []string{"224.0.0.1:9999"}
+var addrUDP = "224.0.0.1"
+var knownNodes = []string{"224.0.0.1:9999","224.0.0.1:9995","224.0.0.1:9997"}
 var mempool = make(map[string]Transaction)
 
 
@@ -60,8 +61,8 @@ func gobEncode(data interface{}) []byte {
 	return buff.Bytes()
 }
 
-func sendData(data []byte) {
-	addr, err := net.ResolveUDPAddr(protocol, knownNodes[0])
+func sendData(data []byte, target_group string) {
+	addr, err := net.ResolveUDPAddr(protocol, target_group)
 	conn, err := net.DialUDP(protocol,nil, addr)
 	if err != nil {
 		fmt.Printf("%s is not available\n", addr)
@@ -75,18 +76,19 @@ func sendData(data []byte) {
 	}
 }
 
-func sendTx(tnx *Transaction) {
+func sendTx(tnx *Transaction, target_group string) {
 	data := tx{nodeAddress, tnx.Serialize()}
 	payload := gobEncode(data)
 	request := append(commandToBytes("tx"), payload...)
 
-	sendData(request)
+	sendData(request, target_group)
 }
 
 // StartServer starts a node
-func StartServer(nodeID string, h func(*net.UDPAddr, int, []byte, *Blockchain)) {
+func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Blockchain)) {
 	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
-	addr, err := net.ResolveUDPAddr("udp", knownNodes[0]) // currently will always connect to a udp port
+	target_group := fmt.Sprintf("%s:%s",addrUDP,portUDP)
+	addr, err := net.ResolveUDPAddr("udp", target_group) // currently will always connect to a udp port
 	if err != nil {
 		log.Panic(err)
 	}
@@ -99,7 +101,7 @@ func StartServer(nodeID string, h func(*net.UDPAddr, int, []byte, *Blockchain)) 
 
 			for _, tx := range block.Transactions {
 				// send the transactions to all parties in the group
-				sendTx(tx)
+				sendTx(tx,target_group)
 			}
 
 			if len(block.PrevBlockHash) == 0 {
@@ -115,11 +117,6 @@ func StartServer(nodeID string, h func(*net.UDPAddr, int, []byte, *Blockchain)) 
 	defer ln.Close()
 
 	bc := NewBlockchain(nodeID)
-
-	// Disabled synchronization for now
-	/*if nodeAddress != knownNodes[0] {
-		sendVersion(knownNodes[0], bc)
-	}*/
 
 	ln.SetReadBuffer(maxDatagramSize)
 	for {

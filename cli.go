@@ -59,6 +59,7 @@ func (cli *CLI) Run() {
 	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 	generateTo := generateCmd.String("to","","Destination wallet address")
 	generateAmount := generateCmd.Int("amount", 0, "Amount to generate")
+	portUDP := startNodeCmd.String("port", "", "Target port")
 
 	switch os.Args[1] {
 	case "getbalance":
@@ -162,10 +163,10 @@ func (cli *CLI) Run() {
 
 	if startNodeCmd.Parsed() {
 		nodeID := os.Getenv("NODE_ID")
-		if nodeID == "" {
+		if nodeID == "" || *portUDP=="" {
 			startNodeCmd.Usage()
 			os.Exit(1)
 		}
-		cli.startNode(nodeID)
+		cli.startNode(nodeID,*portUDP)
 	}
 }
