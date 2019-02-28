@@ -17,7 +17,7 @@ const maxDatagramSize = 8192
 
 var nodeAddress string
 var addrUDP = "224.0.0.1"
-var knownNodes = []string{"224.0.0.1:9999","224.0.0.1:9995","224.0.0.1:9997"}
+var knownNodes = []string{"3000"}
 var mempool = make(map[string]Transaction)
 
 
@@ -84,6 +84,40 @@ func sendTx(tnx *Transaction, target_group string) {
 	sendData(request, target_group)
 }
 
+func SendID(nodeID ,target_group string){
+	payload := commandToBytes(nodeID)
+	request := append(commandToBytes("syn"), payload...)
+	sendData(request, target_group)
+}
+
+func SendTxs(nodeID string,target_group string){
+	bc := NewBlockchain(nodeID)
+	bci := bc.Iterator()
+	var txs []*Transaction
+	for {
+		block := bci.Next()
+		var curtxs[]*Transaction
+		for _, tx := range block.Transactions {
+			curtxs = append([]*Transaction{tx}, curtxs...)
+		}
+		txs = append(txs,curtxs...)
+		curtxs = nil
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+	// reverse transaction sending
+	for i, j := 0, len(txs)-1; i < j; i, j = i+1, j-1 {
+		txs[i], txs[j] = txs[j], txs[i]
+	}
+	for _,tx := range txs{
+		// send the transactions to all parties in the group
+		fmt.Println(tx)
+		sendTx(tx,target_group)
+	}
+
+}
+
 // StartServer starts a node
 func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Blockchain)) {
 	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
@@ -93,21 +127,8 @@ func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Bloc
 		log.Panic(err)
 	}
 
-	if(nodeID=="3000")	{
-		bc := NewBlockchain(nodeID)
-		bci := bc.Iterator()
-		for {
-			block := bci.Next()
-
-			for _, tx := range block.Transactions {
-				// send the transactions to all parties in the group
-				sendTx(tx,target_group)
-			}
-
-			if len(block.PrevBlockHash) == 0 {
-				break
-			}
-		}
+	if nodeID=="3000"	{
+		SendTxs(nodeID,target_group)
 	}
 
 	ln, err := net.ListenMulticastUDP(protocol,nil, addr)
@@ -186,7 +207,7 @@ func handleTx(request []byte, bc *Blockchain) {
 		UTXOSet := UTXOSet{bc}
 		UTXOSet.Reindex()
 
-		fmt.Println("New block %x is created",newBlock.Hash)
+		fmt.Printf("New block %x is created\n",newBlock.Hash)
 
 		for _, tx := range txs {
 			txID := hex.EncodeToString(tx.ID)

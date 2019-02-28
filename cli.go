@@ -21,7 +21,7 @@ func (cli *CLI) printUsage() {
 	fmt.Println("  reindexutxo - Rebuilds the UTXO set")
 	fmt.Println("  send -from FROM -to TO -amount AMOUNT - Send AMOUNT of coins from FROM address to TO")
 	fmt.Println("  generate -to TO -amount AMOUNT - Generate AMOUNT of coins to TO ")
-	fmt.Println("  startnode - Start a node with ID specified in NODE_ID env.")
+	fmt.Println("  startnode -port PORT_NO - Start a node with ID specified in NODE_ID env at target port PORT_NO")
 
 }
 
