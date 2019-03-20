@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strings"
 	"bytes"
 	"encoding/gob"
 	"encoding/hex"
@@ -9,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"strconv"
 )
 
 const protocol = "udp"
@@ -23,34 +21,40 @@ var nodeAddress string
 var addrUDP = "224.0.0.1"
 var NotaryNodes = []string{"3000"}
 var mempool = make(map[string]Transaction)
+var notary_checked = false
 
 func isNotary(nodeID string) bool{
 	for _, n := range NotaryNodes{
 		if nodeID == n{
-			fmt.Println("This is the notary node!")
+			if !notary_checked{
+				fmt.Println("This is the notary node!")
+				notary_checked = true
+			}
+
 			return true
 		}
 	}
 	return false
 }
 
-type tally struct {
-	yes 		int
-	no 			int
-	nodes 		[]string
+type Tally struct {
+	Yes 		int
+	No 			int
+	Nodes 		map[string]bool
 }
 
-type tx struct {
+type Tx struct {
 	AddFrom     string
 	Transaction []byte
 }
 
-type vote struct {
+type Vote struct {
 	AddFrom string
-	result    string
+	ID string
+	Result  bool
 }
 
-var votePool = make(map[string]tally)
+var votePool = make(map[string]Tally)
 
 func commandToBytes(command string) []byte {
 	var bytes [commandLength]byte
@@ -103,7 +107,7 @@ func sendData(data []byte, target_group string) {
 }
 
 func sendTx(tnx *Transaction, target_group string) {
-	data := tx{nodeAddress, tnx.Serialize()}
+	data := Tx{nodeAddress, tnx.Serialize()}
 	payload := gobEncode(data)
 	request := append(commandToBytes("tx"), payload...)
 	sendData(request, target_group)
@@ -116,22 +120,15 @@ func SendID(nodeID ,target_group string){
 }
 
 func SendVote(nodeID, target_group string,ID []byte, result bool){
-	data := vote{nodeID+","+string(ID[:])+","+strconv.FormatBool(result), "abc" }
-	fmt.Println(data)
-	payload := gobEncode(vote{nodeID+","+string(ID[:]), strconv.FormatBool(result) })
-	fmt.Println(payload)
-	request := append(commandToBytes("vot"), payload...)
-	fmt.Println(request)
-	var buff bytes.Buffer
-	buff.Write(request[commandLength:])
-	dec := gob.NewDecoder(&buff)
-	var res vote
-	err := dec.Decode(&res)
-	if err != nil {
-		log.Panic(err)
-	}
-	fmt.Println(buff)
-	fmt.Println(res)
+	data := Vote{
+		AddFrom: nodeID,
+		ID: string(ID),
+		Result: result,}
+	//fmt.Println(data)
+	payload := gobEncode(data)
+	//fmt.Println(payload)
+	request := append(commandToBytes("vote"), payload...)
+	//fmt.Println(request)
 	sendData(request,target_group)
 }
 
@@ -208,11 +205,11 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 	request := b
 	command := bytesToCommand(request[:commandLength])
 	fmt.Printf("Received %s command\n", command)
-	log.Println(request)  // hard debug
+	//log.Println(request)  // hard debug
 
 	if isNotary(selfID)==true{
 		switch command {
-		case "vt":
+		case "vote":
 			handleVote(request,bc)
 			return
 		}
@@ -227,48 +224,58 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 
 func handleVote(request []byte, bc * Blockchain){
 	var buff bytes.Buffer
-	var payload vote
-
+	var payload Vote
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
 	if err != nil {
 		log.Panic(err)
 	}
-	fmt.Println(payload)
-	tmp := strings.Split(payload.AddFrom,",")
-	TxID := tmp[0]
-	result := tmp[1]
-	if val, ok := votePool[TxID]; ok {
-		if(result =="true"){
-			val.yes ++
+	//fmt.Println(payload)
+	voter := payload.AddFrom
+	txid := payload.ID
+	result := payload.Result
+	if val, ok := votePool[txid]; ok {
+		if val.Nodes[voter]==true {
+			fmt.Printf("Transaction %s has been voted by %s!\n", txid, voter)
+			return
+		}
+
+		if(result == true){
+			val.Yes ++
 
 		}else {
-			val.no++
+			val.No++
 		}
-		val.nodes = append(val.nodes, payload.AddFrom)
-		fmt.Println(result,val.yes,val.no,numNodes,val.nodes)
-		if val.yes> numNodes/2+1{
-			fmt.Printf("Transaction %s accepted!\n",TxID)
+		val.Nodes[voter] = true
+		fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
+		if val.Yes> numNodes/2+1{
+			fmt.Printf("Transaction %s accepted!\n",txid)
+			// Remove from pool, free up memory
+			delete(votePool, txid)
+			// Do the acceptance here
 		}
+		// Update Pool
+		votePool[txid] = val
 	}	else{
 		// New payload
-		var val tally
-		if(result =="true"){
-			val.yes++
+		var val Tally
+		if(result == true){
+			val.Yes++
 		}		else{
-			val.no++
+			val.No++
 		}
-		val.nodes = append(val.nodes, payload.AddFrom)
-		votePool[TxID]= val
-		fmt.Println(result,val.yes,val.no,numNodes,val.nodes)
+		val.Nodes = make(map[string]bool)
+		val.Nodes[voter] = true
+		votePool[txid]= val
+		fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
 	}
 
 }
 
 func handleTx(request []byte, bc *Blockchain) {
 	var buff bytes.Buffer
-	var payload tx
+	var payload Tx
 
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
