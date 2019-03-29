@@ -30,7 +30,6 @@ func isNotary(nodeID string) bool{
 				fmt.Println("This is the notary node!")
 				notary_checked = true
 			}
-
 			return true
 		}
 	}
@@ -211,10 +210,15 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 		switch command {
 		case "vote":
 			handleVote(request,bc)
-			return
+		case "tx":
+			handleTx(request, bc)
+		default:
+			fmt.Println("Unknown command!")
 		}
+		return
 	}
 	switch command {
+	case "vote": // No OP
 	case "tx":
 		handleTx(request, bc)
 	default:
@@ -249,11 +253,16 @@ func handleVote(request []byte, bc * Blockchain){
 		}
 		val.Nodes[voter] = true
 		fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
-		if val.Yes> numNodes/2+1{
-			fmt.Printf("Transaction %s accepted!\n",txid)
+		if val.Yes> numNodes/2+1 {
+			fmt.Printf("Transaction %s accepted!\n", txid)
 			// Remove from pool, free up memory
 			delete(votePool, txid)
 			// Do the acceptance here
+		}	else if(val.Yes + val.No == numNodes)		{
+			fmt.Printf("Transaction %s rejected!\n",txid)
+			// Remove from pool, free up memory
+			delete(votePool, txid)
+			// Do the transaction deletion here
 		}
 		// Update Pool
 		votePool[txid] = val
