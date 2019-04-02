@@ -22,6 +22,7 @@ var addrUDP = "224.0.0.1"
 var NotaryNodes = []string{"3000"}
 var mempool = make(map[string]Transaction)
 var notary_checked = false
+var target_group = ""
 
 func isNotary(nodeID string) bool{
 	for _, n := range NotaryNodes{
@@ -42,6 +43,13 @@ type Tally struct {
 	Nodes 		map[string]bool
 }
 
+type TallyResult struct{
+	ID []byte
+	Yes int
+	No int
+	Result bool
+}
+
 type Tx struct {
 	AddFrom     string
 	Transaction []byte
@@ -51,6 +59,10 @@ type Vote struct {
 	AddFrom string
 	ID string
 	Result  bool
+}
+
+type RequestVote struct {
+	TxID []byte
 }
 
 var votePool = make(map[string]Tally)
@@ -90,7 +102,7 @@ func gobEncode(data interface{}) []byte {
 	return buff.Bytes()
 }
 
-func sendData(data []byte, target_group string) {
+func sendData(data []byte) {
 	addr, err := net.ResolveUDPAddr(protocol, target_group)
 	conn, err := net.DialUDP(protocol,nil, addr)
 	if err != nil {
@@ -105,20 +117,20 @@ func sendData(data []byte, target_group string) {
 	}
 }
 
-func sendTx(tnx *Transaction, target_group string) {
+func sendTx(tnx *Transaction) {
 	data := Tx{nodeAddress, tnx.Serialize()}
 	payload := gobEncode(data)
 	request := append(commandToBytes("tx"), payload...)
-	sendData(request, target_group)
+	sendData(request)
 }
 
 func SendID(nodeID ,target_group string){
 	payload := commandToBytes(nodeID)
 	request := append(commandToBytes("syn"), payload...)
-	sendData(request, target_group)
+	sendData(request)
 }
 
-func SendVote(nodeID, target_group string,ID []byte, result bool){
+func SendVote(nodeID string,ID []byte, result bool){
 	data := Vote{
 		AddFrom: nodeID,
 		ID: string(ID),
@@ -128,10 +140,10 @@ func SendVote(nodeID, target_group string,ID []byte, result bool){
 	//fmt.Println(payload)
 	request := append(commandToBytes("vote"), payload...)
 	//fmt.Println(request)
-	sendData(request,target_group)
+	sendData(request)
 }
 
-func SendTxs(nodeID string,target_group string){
+func SendTxs(nodeID string){
 	bc := NewBlockchain(nodeID)
 	bci := bc.Iterator()
 	var txs []*Transaction
@@ -154,7 +166,7 @@ func SendTxs(nodeID string,target_group string){
 	for _,tx := range txs{
 		// send the transactions to all parties in the group
 		fmt.Println(tx)
-		sendTx(tx,target_group)
+		sendTx(tx)
 	}
 
 }
@@ -162,16 +174,16 @@ func SendTxs(nodeID string,target_group string){
 // StartServer starts a node
 func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Blockchain)) {
 	nodeAddress = fmt.Sprintf("localhost:%s", nodeID)
-	target_group := fmt.Sprintf("%s:%s",addrUDP,portUDP)
+	target_group = fmt.Sprintf("%s:%s",addrUDP,portUDP)
 	selfID = nodeID
 	addr, err := net.ResolveUDPAddr("udp", target_group) // currently will always connect to a udp port
 	if err != nil {
 		log.Panic(err)
 	}
 
-	if isNotary(nodeID)==false{
-		SendVote(nodeID, target_group, []byte("test"), true)
-	}
+	//if isNotary(nodeID)==false{
+	//	SendVote(nodeID, []byte("test"), true)
+	//}
 	//if nodeID=="3000"	{
 	//	SendTxs(nodeID,target_group)
 	//}
@@ -212,6 +224,9 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 			handleVote(request,bc)
 		case "tx":
 			handleTx(request, bc)
+		case "rv":
+		case "tally":
+			handleTallyResult(request,bc)
 		default:
 			fmt.Println("Unknown command!")
 		}
@@ -221,9 +236,69 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 	case "vote": // No OP
 	case "tx":
 		handleTx(request, bc)
+	case "rv":
+		handleRequestVote(request,bc)
+	case "tally":
+		handleTallyResult(request,bc)
 	default:
 		fmt.Println("Unknown command!")
 	}
+}
+
+
+func sendRequestVote(tx *Transaction){
+	data := RequestVote{
+		TxID: tx.ID,}
+	payload := gobEncode(data)
+	request := append(commandToBytes("rv"), payload...)
+	sendData(request)
+}
+
+func handleRequestVote(request []byte, bc *Blockchain) {
+	var buff bytes.Buffer
+	var payload RequestVote
+	buff.Write(request[commandLength:])
+	dec := gob.NewDecoder(&buff)
+	err := dec.Decode(&payload)
+	if err != nil {
+		log.Panic(err)
+	}
+	txID := payload.TxID
+	_, er := bc.FindTransaction(txID)
+	tx := mempool[hex.EncodeToString(txID)]
+	if(er!=nil){
+		if(bc.VerifyTransaction(&tx)){
+			SendVote(selfID, txID, true)
+		} else{
+			SendVote(selfID, txID, false)
+		}
+	}
+	// Send the vote
+	SendVote(selfID, txID, true)
+}
+
+func sendTallyResult(res *TallyResult){
+	payload := gobEncode(res)
+	request := append(commandToBytes("tally"), payload...)
+	sendData(request)
+}
+
+func handleTallyResult(request []byte, bc *Blockchain) {
+	var buff bytes.Buffer
+	var payload TallyResult
+	buff.Write(request[commandLength:])
+	dec := gob.NewDecoder(&buff)
+	err := dec.Decode(&payload)
+	if err != nil {
+		log.Panic(err)
+	}
+	var txs []*Transaction
+	tx := mempool[hex.EncodeToString(payload.ID)]
+	txs = append(txs, &tx)
+	newBlock := bc.NewBlock(txs)
+	UTXOSet := UTXOSet{bc}
+	UTXOSet.Reindex()
+	fmt.Printf("New block %x is created\n",newBlock.Hash)
 }
 
 func handleVote(request []byte, bc * Blockchain){
@@ -253,13 +328,31 @@ func handleVote(request []byte, bc * Blockchain){
 		}
 		val.Nodes[voter] = true
 		fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
+		byte_txid,err := hex.DecodeString(txid)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if val.Yes> numNodes/2+1 {
 			fmt.Printf("Transaction %s accepted!\n", txid)
+			res := TallyResult{
+				ID: byte_txid,
+				Yes: val.Yes,
+				No:val.No,
+				Result:true,
+			}
+			sendTallyResult(&res)
 			// Remove from pool, free up memory
 			delete(votePool, txid)
 			// Do the acceptance here
 		}	else if(val.Yes + val.No == numNodes)		{
 			fmt.Printf("Transaction %s rejected!\n",txid)
+			res := TallyResult{
+				ID: byte_txid,
+				Yes: val.Yes,
+				No:val.No,
+				Result:false,
+			}
+			sendTallyResult(&res)
 			// Remove from pool, free up memory
 			delete(votePool, txid)
 			// Do the transaction deletion here
@@ -297,38 +390,31 @@ func handleTx(request []byte, bc *Blockchain) {
 	tx := DeserializeTransaction(txData)
 	mempool[hex.EncodeToString(tx.ID)] = tx
 
-	if len(mempool) >= 1 {
-	VerifyTransactions:
-		var txs []*Transaction
+	var txs []*Transaction
 
-		for id := range mempool {
-			tx := mempool[id]
-			if bc.VerifyTransaction(&tx) {
+	for id := range mempool {
+		tx := mempool[id]
+		_,err := bc.FindTransaction(tx.ID)
+		if err != nil {
+			// Transaction does not exist yet
+			if isNotary(payload.AddFrom)==true{
+				// if the transaction if from notary, it is considered always correct
 				txs = append(txs, &tx)
+				delete(mempool, hex.EncodeToString(tx.ID))
+			} else{
+				//  check with other nodes whether transaction is valid
+				sendRequestVote(&tx)
 			}
 		}
-
-		if len(txs) == 0 {
-			fmt.Println("All transactions are invalid! Waiting for new ones...")
-			return
-		}
-
-		//cbTx := NewCoinbaseTX(miningAddress, "")
-		// txs = append(txs, cbTx)
-
-		newBlock := bc.NewBlock(txs)
-		UTXOSet := UTXOSet{bc}
-		UTXOSet.Reindex()
-
-		fmt.Printf("New block %x is created\n",newBlock.Hash)
-
-		for _, tx := range txs {
-			txID := hex.EncodeToString(tx.ID)
-			delete(mempool, txID)
-		}
-
-		if len(mempool) > 0 {
-			goto VerifyTransactions
-		}
 	}
+
+	//cbTx := NewCoinbaseTX(miningAddress, "")
+	// txs = append(txs, cbTx)
+
+	newBlock := bc.NewBlock(txs)
+	UTXOSet := UTXOSet{bc}
+	UTXOSet.Reindex()
+
+	fmt.Printf("New block %x is created\n",newBlock.Hash)
+
 }
