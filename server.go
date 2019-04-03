@@ -57,11 +57,15 @@ type Tx struct {
 
 type Vote struct {
 	AddFrom string
-	ID string
+	ID []byte
 	Result  bool
 }
 
 type RequestVote struct {
+	TxID []byte
+}
+
+type InitVote struct {
 	TxID []byte
 }
 
@@ -124,7 +128,7 @@ func sendTx(tnx *Transaction) {
 	sendData(request)
 }
 
-func SendID(nodeID ,target_group string){
+func SendID(nodeID string){
 	payload := commandToBytes(nodeID)
 	request := append(commandToBytes("syn"), payload...)
 	sendData(request)
@@ -133,7 +137,7 @@ func SendID(nodeID ,target_group string){
 func SendVote(nodeID string,ID []byte, result bool){
 	data := Vote{
 		AddFrom: nodeID,
-		ID: string(ID),
+		ID: ID,
 		Result: result,}
 	//fmt.Println(data)
 	payload := gobEncode(data)
@@ -181,13 +185,6 @@ func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Bloc
 		log.Panic(err)
 	}
 
-	//if isNotary(nodeID)==false{
-	//	SendVote(nodeID, []byte("test"), true)
-	//}
-	//if nodeID=="3000"	{
-	//	SendTxs(nodeID,target_group)
-	//}
-
 	ln, err := net.ListenMulticastUDP(protocol,nil, addr)
 	if err != nil {
 		log.Panic(err)
@@ -195,6 +192,21 @@ func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Bloc
 	defer ln.Close()
 
 	bc := NewBlockchain(nodeID)
+
+	//if isNotary(nodeID)==false{
+	//	SendVote(nodeID, []byte("test"), true)
+	//}
+	if nodeID=="3001"	{
+		txid, err1 := hex.DecodeString("21fafdafe67732c4f7c7e584be68401b97e1017a853f73d6743a0af18e29dca1")
+		if err1 != nil {
+			log.Panic(err)
+		}
+		tx, err2 := bc.FindTransaction(txid)
+		if err2 != nil {
+			log.Panic(err)
+		}
+		sendTx(&tx)
+	}
 
 	ln.SetReadBuffer(maxDatagramSize)
 	for {
@@ -225,6 +237,8 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 		case "tx":
 			handleTx(request, bc)
 		case "rv":
+			handleRequestVote(request,bc)
+		case "iv":
 		case "tally":
 			handleTallyResult(request,bc)
 		default:
@@ -237,7 +251,8 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 	case "tx":
 		handleTx(request, bc)
 	case "rv":
-		handleRequestVote(request,bc)
+	case "iv":
+		handleInitVote(request,bc)
 	case "tally":
 		handleTallyResult(request,bc)
 	default:
@@ -257,6 +272,37 @@ func sendRequestVote(tx *Transaction){
 func handleRequestVote(request []byte, bc *Blockchain) {
 	var buff bytes.Buffer
 	var payload RequestVote
+	buff.Write(request[commandLength:])
+	dec := gob.NewDecoder(&buff)
+	err := dec.Decode(&payload)
+	if err != nil {
+		log.Panic(err)
+	}
+	txid_str := hex.EncodeToString(payload.TxID)
+	if _, ok := votePool[txid_str]; ok {
+		// Transaction is currently being voted, no need to initiate another one
+		return
+	}
+	if tx, ok := mempool[txid_str]; ok {
+		// Find the transaction in the memory then initiate the vote
+		sendInitVote(&tx)
+		var val Tally
+		val.Nodes = make(map[string]bool)
+		votePool[txid_str]= val
+	}
+}
+
+func sendInitVote(tx *Transaction){
+	data := InitVote{
+		TxID: tx.ID,}
+	payload := gobEncode(data)
+	request := append(commandToBytes("iv"), payload...)
+	sendData(request)
+}
+
+func handleInitVote(request []byte, bc *Blockchain) {
+	var buff bytes.Buffer
+	var payload InitVote
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
@@ -292,13 +338,24 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 	if err != nil {
 		log.Panic(err)
 	}
-	var txs []*Transaction
-	tx := mempool[hex.EncodeToString(payload.ID)]
-	txs = append(txs, &tx)
-	newBlock := bc.NewBlock(txs)
-	UTXOSet := UTXOSet{bc}
-	UTXOSet.Reindex()
-	fmt.Printf("New block %x is created\n",newBlock.Hash)
+	if payload.Result ==true{
+		// Transaction is accepted by all majority, put in blockchain
+		_,err1 := bc.FindTransaction(payload.ID)
+		fmt.Printf("Transaction %s accepted!\n",hex.EncodeToString(payload.ID))
+		if err1 != nil {
+			var txs []*Transaction
+			tx := mempool[hex.EncodeToString(payload.ID)]
+			txs = append(txs, &tx)
+			newBlock := bc.NewBlock(txs)
+			UTXOSet := UTXOSet{bc}
+			UTXOSet.Reindex()
+			fmt.Printf("New block %x is created\n",newBlock.Hash)
+		}
+	}	else{
+		fmt.Printf("Transaction %s rejected!\n",hex.EncodeToString(payload.ID))
+	}
+	// Delete the transaction from memory after voting is done
+	delete(mempool, hex.EncodeToString(payload.ID))
 }
 
 func handleVote(request []byte, bc * Blockchain){
@@ -313,10 +370,11 @@ func handleVote(request []byte, bc * Blockchain){
 	//fmt.Println(payload)
 	voter := payload.AddFrom
 	txid := payload.ID
+	txid_str := hex.EncodeToString(txid)
 	result := payload.Result
-	if val, ok := votePool[txid]; ok {
+	if val, ok := votePool[txid_str]; ok {
 		if val.Nodes[voter]==true {
-			fmt.Printf("Transaction %s has been voted by %s!\n", txid, voter)
+			fmt.Printf("Transaction %s has been voted by %s!\n", txid_str, voter)
 			return
 		}
 
@@ -328,49 +386,39 @@ func handleVote(request []byte, bc * Blockchain){
 		}
 		val.Nodes[voter] = true
 		fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
-		byte_txid,err := hex.DecodeString(txid)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if val.Yes> numNodes/2+1 {
-			fmt.Printf("Transaction %s accepted!\n", txid)
+			fmt.Printf("Transaction %s accepted!\n", txid_str)
 			res := TallyResult{
-				ID: byte_txid,
+				ID: txid,
 				Yes: val.Yes,
 				No:val.No,
 				Result:true,
 			}
 			sendTallyResult(&res)
 			// Remove from pool, free up memory
-			delete(votePool, txid)
+			delete(votePool, txid_str)
 			// Do the acceptance here
 		}	else if(val.Yes + val.No == numNodes)		{
-			fmt.Printf("Transaction %s rejected!\n",txid)
+			fmt.Printf("Transaction %s rejected!\n",txid_str)
 			res := TallyResult{
-				ID: byte_txid,
+				ID: txid,
 				Yes: val.Yes,
 				No:val.No,
 				Result:false,
 			}
 			sendTallyResult(&res)
 			// Remove from pool, free up memory
-			delete(votePool, txid)
+			delete(votePool, txid_str)
 			// Do the transaction deletion here
 		}
 		// Update Pool
-		votePool[txid] = val
+		votePool[txid_str] = val
 	}	else{
-		// New payload
-		var val Tally
-		if(result == true){
-			val.Yes++
-		}		else{
-			val.No++
-		}
-		val.Nodes = make(map[string]bool)
-		val.Nodes[voter] = true
-		votePool[txid]= val
-		fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
+		// VotePool not initialized, initvote is not called before voting commences
+		log.Fatal(ok)
 	}
 
 }
@@ -410,7 +458,9 @@ func handleTx(request []byte, bc *Blockchain) {
 
 	//cbTx := NewCoinbaseTX(miningAddress, "")
 	// txs = append(txs, cbTx)
-
+	if len(txs) == 0 {
+		return;
+	}
 	newBlock := bc.NewBlock(txs)
 	UTXOSet := UTXOSet{bc}
 	UTXOSet.Reindex()

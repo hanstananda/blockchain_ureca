@@ -266,8 +266,8 @@ func (bc *Blockchain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey)
 
 // VerifyTransaction verifies transaction input signatures
 func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
-	fmt.Println(tx.IsCoinbase(),len(tx.Vin),tx.Vin[0].Txid,tx.Vin[0].Vout)
-	fmt.Println(tx)
+	//fmt.Println(tx.IsCoinbase(),len(tx.Vin),tx.Vin[0].Txid,tx.Vin[0].Vout)
+	//fmt.Println(tx)
 	if tx.IsCoinbase() {
 		return true
 	}
@@ -281,6 +281,6 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 		}
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
-	fmt.Println(prevTXs)
+	//fmt.Println(prevTXs)
 	return tx.Verify(prevTXs)
 }
