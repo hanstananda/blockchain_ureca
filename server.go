@@ -197,7 +197,7 @@ func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Bloc
 	//	SendVote(nodeID, []byte("test"), true)
 	//}
 	if nodeID=="3001"	{
-		txid, err1 := hex.DecodeString("21fafdafe67732c4f7c7e584be68401b97e1017a853f73d6743a0af18e29dca1")
+		txid, err1 := hex.DecodeString("430344e951a895eafaa1889acac1fd1c6ea11f421aedbc7f3c3aae7a11e6a00f")
 		if err1 != nil {
 			log.Panic(err)
 		}
@@ -450,6 +450,7 @@ func handleTx(request []byte, bc *Blockchain) {
 				txs = append(txs, &tx)
 				delete(mempool, hex.EncodeToString(tx.ID))
 			} else{
+				print(tx)
 				//  check with other nodes whether transaction is valid
 				sendRequestVote(&tx)
 			}
