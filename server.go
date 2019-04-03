@@ -450,7 +450,7 @@ func handleTx(request []byte, bc *Blockchain) {
 				txs = append(txs, &tx)
 				delete(mempool, hex.EncodeToString(tx.ID))
 			} else{
-				print(tx)
+				fmt.Printf(tx.String())
 				//  check with other nodes whether transaction is valid
 				sendRequestVote(&tx)
 			}

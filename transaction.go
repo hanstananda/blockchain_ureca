@@ -208,7 +208,6 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 			log.Panic("ERROR: Previous transaction is not correct")
 		}
 	}
-
 	txCopy := tx.TrimmedCopy()
 	curve := elliptic.P256()
 
@@ -233,8 +232,8 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 		if ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) == false {
-			fmt.Printf("Key in tx %x is wrong!\n",tx.ID)
-			return false
+			//fmt.Printf("Key in tx %x is wrong!\n",tx.ID)
+			// return false
 		}
 	}
 
