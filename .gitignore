@@ -22,3 +22,5 @@ blockchain_ureca
 
 # Logs
 server_log/
+
+venv/
