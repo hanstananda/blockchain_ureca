@@ -205,7 +205,8 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 
 	for _, vin := range tx.Vin {
 		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
-			log.Panic("ERROR: Previous transaction is not correct")
+			return false
+			//log.Panic("ERROR: Previous transaction is not correct")
 		}
 	}
 	txCopy := tx.TrimmedCopy()

@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
+	"time"
 )
 
 const protocol = "udp"
@@ -23,6 +25,12 @@ var NotaryNodes = []string{"3000"}
 var mempool = make(map[string]Transaction)
 var notary_checked = false
 var target_group = ""
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 func isNotary(nodeID string) bool{
 	for _, n := range NotaryNodes{
@@ -48,6 +56,10 @@ type TallyResult struct{
 	Yes int
 	No int
 	Result bool
+}
+
+type Syn struct{
+	Address string
 }
 
 type Tx struct {
@@ -99,9 +111,7 @@ func gobEncode(data interface{}) []byte {
 
 	enc := gob.NewEncoder(&buff)
 	err := enc.Encode(data)
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 
 	return buff.Bytes()
 }
@@ -116,9 +126,7 @@ func sendData(data []byte) {
 	defer conn.Close()
 
 	_, err = io.Copy(conn, bytes.NewReader(data))
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 }
 
 func sendTx(tnx *Transaction) {
@@ -128,10 +136,39 @@ func sendTx(tnx *Transaction) {
 	sendData(request)
 }
 
-func SendID(nodeID string){
-	payload := commandToBytes(nodeID)
+func SendID(){
+	data := Syn{nodeAddress}
+	payload := gobEncode(data)
 	request := append(commandToBytes("syn"), payload...)
 	sendData(request)
+}
+
+func handleID(request []byte, bc *Blockchain){
+	var buff bytes.Buffer
+	var payload Syn
+	buff.Write(request[commandLength:])
+	dec := gob.NewDecoder(&buff)
+	err := dec.Decode(&payload)
+	check(err)
+	SendTxs(bc)
+	SendSyncBack()
+}
+
+func SendSyncBack(){
+	data := Syn{nodeAddress}
+	payload := gobEncode(data)
+	request := append(commandToBytes("syn-b"), payload...)
+	sendData(request)
+}
+
+func handleSynBack(request []byte, bc *Blockchain){
+	var buff bytes.Buffer
+	var payload Syn
+	buff.Write(request[commandLength:])
+	dec := gob.NewDecoder(&buff)
+	err := dec.Decode(&payload)
+	check(err)
+	SendTxs(bc)
 }
 
 func SendVote(nodeID string,ID []byte, result bool){
@@ -147,8 +184,7 @@ func SendVote(nodeID string,ID []byte, result bool){
 	sendData(request)
 }
 
-func SendTxs(nodeID string){
-	bc := NewBlockchain(nodeID)
+func SendTxs(bc *Blockchain){
 	bci := bc.Iterator()
 	var txs []*Transaction
 	for {
@@ -169,7 +205,7 @@ func SendTxs(nodeID string){
 	}
 	for _,tx := range txs{
 		// send the transactions to all parties in the group
-		fmt.Println(tx)
+		//fmt.Println(tx)
 		sendTx(tx)
 	}
 
@@ -181,31 +217,17 @@ func StartServer(nodeID, portUDP string, h func(*net.UDPAddr, int, []byte, *Bloc
 	target_group = fmt.Sprintf("%s:%s",addrUDP,portUDP)
 	selfID = nodeID
 	addr, err := net.ResolveUDPAddr("udp", target_group) // currently will always connect to a udp port
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 
 	ln, err := net.ListenMulticastUDP(protocol,nil, addr)
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 	defer ln.Close()
 
 	bc := NewBlockchain(nodeID)
 
-	//if isNotary(nodeID)==false{
-	//	SendVote(nodeID, []byte("test"), true)
-	//}
-	if nodeID=="3001"	{
-		txid, err1 := hex.DecodeString("430344e951a895eafaa1889acac1fd1c6ea11f421aedbc7f3c3aae7a11e6a00f")
-		if err1 != nil {
-			log.Panic(err)
-		}
-		tx, err2 := bc.FindTransaction(txid)
-		if err2 != nil {
-			log.Panic(err)
-		}
-		sendTx(&tx)
+	// Synchronize the node first on intitialization
+	if !isNotary(selfID) {
+		SendID()
 	}
 
 	ln.SetReadBuffer(maxDatagramSize)
@@ -241,6 +263,9 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 		case "iv":
 		case "tally":
 			handleTallyResult(request,bc)
+		case "syn":
+			handleID(request, bc)
+		case "syn-b":
 		default:
 			fmt.Println("Unknown command!")
 		}
@@ -255,6 +280,9 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 		handleInitVote(request,bc)
 	case "tally":
 		handleTallyResult(request,bc)
+	case "syn":
+	case "syn-b":
+		handleSynBack(request, bc)
 	default:
 		fmt.Println("Unknown command!")
 	}
@@ -275,9 +303,7 @@ func handleRequestVote(request []byte, bc *Blockchain) {
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 	txid_str := hex.EncodeToString(payload.TxID)
 	if _, ok := votePool[txid_str]; ok {
 		// Transaction is currently being voted, no need to initiate another one
@@ -289,6 +315,8 @@ func handleRequestVote(request []byte, bc *Blockchain) {
 		var val Tally
 		val.Nodes = make(map[string]bool)
 		votePool[txid_str]= val
+		addLog("Initiating vote for Transaction #"+txid_str)
+		addcsvLog("txid_str"+ " , " + "INIT")
 	}
 }
 
@@ -306,9 +334,7 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 	txID := payload.TxID
 	_, er := bc.FindTransaction(txID)
 	tx := mempool[hex.EncodeToString(txID)]
@@ -335,9 +361,7 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 	if payload.Result ==true{
 		// Transaction is accepted by all majority, put in blockchain
 		_,err1 := bc.FindTransaction(payload.ID)
@@ -350,9 +374,15 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 			UTXOSet := UTXOSet{bc}
 			UTXOSet.Reindex()
 			fmt.Printf("New block %x is created\n",newBlock.Hash)
+			for _,tx := range txs{
+				addLog("Transaction #"+hex.EncodeToString(tx.ID)+" has been accepted!")
+				addcsvLog(hex.EncodeToString(tx.ID)+ " , " + "ACC")
+			}
 		}
 	}	else{
 		fmt.Printf("Transaction %s rejected!\n",hex.EncodeToString(payload.ID))
+		addLog("Transaction #"+hex.EncodeToString(payload.ID)+" has been rejected!")
+		addcsvLog(hex.EncodeToString(payload.ID)+ " , " + "REJ")
 	}
 	// Delete the transaction from memory after voting is done
 	delete(mempool, hex.EncodeToString(payload.ID))
@@ -364,9 +394,7 @@ func handleVote(request []byte, bc * Blockchain){
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 	//fmt.Println(payload)
 	voter := payload.AddFrom
 	txid := payload.ID
@@ -413,6 +441,8 @@ func handleVote(request []byte, bc * Blockchain){
 			// Remove from pool, free up memory
 			delete(votePool, txid_str)
 			// Do the transaction deletion here
+			addLog("Transaction #"+txid_str+" has been rejected!")
+			addcsvLog(txid_str+ " , " + "REJ")
 		}
 		// Update Pool
 		votePool[txid_str] = val
@@ -467,5 +497,30 @@ func handleTx(request []byte, bc *Blockchain) {
 	UTXOSet.Reindex()
 
 	fmt.Printf("New block %x is created\n",newBlock.Hash)
+}
 
+func addLog(output string) {
+	// If the file doesn't exist, create it, or append to the file
+	f, err := os.OpenFile(("server_log/"+selfID+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	check(err)
+	output = gettime() + ":" +output+"\n"
+	_,err = f.WriteString(output)
+	check(err)
+	err = f.Close()
+	check(err)
+}
+
+func addcsvLog(output string) {
+	f, err := os.OpenFile(("server_log/"+selfID+".csv"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	check(err)
+	output = gettime() + " , " +output+"\n"
+	_,err = f.WriteString(output)
+	check(err)
+	err = f.Close()
+	check(err)
+}
+
+func gettime() string{
+	dt := time.Now()
+	return dt.Format("01-02-2006 15:04:05.000000000")
 }

@@ -30,5 +30,5 @@ func (cli *CLI) send(from, to string, amount int,nodeID string) {
 	txs := []*Transaction{tx}
 	newBlock := bc.NewBlock(txs)
 	UTXOSet.Update(newBlock)
-	fmt.Println("Success!")
+	fmt.Println("Adding to local blockchain success!")
 }
