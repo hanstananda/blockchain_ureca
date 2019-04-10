@@ -316,7 +316,7 @@ func handleRequestVote(request []byte, bc *Blockchain) {
 		val.Nodes = make(map[string]bool)
 		votePool[txid_str]= val
 		addLog("Initiating vote for Transaction #"+txid_str)
-		addcsvLog("txid_str"+ " , " + "INIT")
+		addcsvLog(txid_str+ " , " + "INIT")
 	}
 }
 
@@ -338,8 +338,10 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	txID := payload.TxID
 	_, er := bc.FindTransaction(txID)
 	tx := mempool[hex.EncodeToString(txID)]
-	if(er!=nil){
-		if(bc.VerifyTransaction(&tx)){
+	addLog("Receiving init vote for Transaction #"+hex.EncodeToString(txID))
+	addcsvLog(hex.EncodeToString(txID)+ " , " + "REC_INIT")
+	if er!=nil{
+		if bc.VerifyTransaction(&tx){
 			SendVote(selfID, txID, true)
 		} else{
 			SendVote(selfID, txID, false)
@@ -402,7 +404,7 @@ func handleVote(request []byte, bc * Blockchain){
 	result := payload.Result
 	if val, ok := votePool[txid_str]; ok {
 		if val.Nodes[voter]==true {
-			fmt.Printf("Transaction %s has been voted by %s!\n", txid_str, voter)
+			//fmt.Printf("Transaction %s has been voted by %s!\n", txid_str, voter)
 			return
 		}
 
@@ -413,7 +415,7 @@ func handleVote(request []byte, bc * Blockchain){
 			val.No++
 		}
 		val.Nodes[voter] = true
-		fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
+		//fmt.Println(result,val.Yes,val.No,numNodes,val.Nodes)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -460,9 +462,7 @@ func handleTx(request []byte, bc *Blockchain) {
 	buff.Write(request[commandLength:])
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
-	if err != nil {
-		log.Panic(err)
-	}
+	check(err)
 
 	txData := payload.Transaction
 	tx := DeserializeTransaction(txData)
@@ -470,27 +470,27 @@ func handleTx(request []byte, bc *Blockchain) {
 
 	var txs []*Transaction
 
-	for id := range mempool {
-		tx := mempool[id]
-		_,err := bc.FindTransaction(tx.ID)
-		if err != nil {
-			// Transaction does not exist yet
-			if isNotary(payload.AddFrom)==true{
-				// if the transaction if from notary, it is considered always correct
-				txs = append(txs, &tx)
-				delete(mempool, hex.EncodeToString(tx.ID))
-			} else{
-				fmt.Printf(tx.String())
-				//  check with other nodes whether transaction is valid
-				sendRequestVote(&tx)
-			}
+	_,err = bc.FindTransaction(tx.ID)
+	if err != nil {
+		// Transaction does not exist yet
+		if isNotary(payload.AddFrom)==true{
+			// if the transaction if from notary, it is considered always correct
+			txs = append(txs, &tx)
+			delete(mempool, hex.EncodeToString(tx.ID))
+		} else{
+			//fmt.Printf(tx.String())
+			//  check with other nodes whether transaction is valid
+			addLog("Requesting vote for Transaction #"+hex.EncodeToString(tx.ID))
+			addcsvLog(hex.EncodeToString(tx.ID)+ " , " + "REQ")
+			sendRequestVote(&tx)
+			return
 		}
 	}
 
 	//cbTx := NewCoinbaseTX(miningAddress, "")
 	// txs = append(txs, cbTx)
 	if len(txs) == 0 {
-		return;
+		return
 	}
 	newBlock := bc.NewBlock(txs)
 	UTXOSet := UTXOSet{bc}

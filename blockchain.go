@@ -278,7 +278,8 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 	for _, vin := range tx.Vin {
 		prevTX, err := bc.FindTransaction(vin.Txid)
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
+			return false
 		}
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
