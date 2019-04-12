@@ -216,7 +216,7 @@ func SendTxs(bc *Blockchain){
 		//fmt.Println(tx)
 		sendTx(tx)
 		//fmt.Println("Sent tx command")
-		r := rand.Intn(10)
+		r := rand.Intn(5)+2
 		if isNotary(selfID){ // Notary node, just give small delays between transastion sync
 			time.Sleep(time.Duration(r) * time.Millisecond * 10)
 		} else {
@@ -330,7 +330,7 @@ func handleRequestVote(request []byte, bc *Blockchain) {
 		var val Tally
 		val.Nodes = make(map[string]bool)
 		votePool[txid_str]= val
-		addLog("Initiating vote for Transaction #"+txid_str)
+		addLog("Transaction # "+txid_str+" : Voting initialized!")
 		addcsvLog(txid_str+ " , " + "INIT")
 	}
 }
@@ -354,7 +354,7 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	txID := payload.TxID
 	_, er := bc.FindTransaction(txID)
 	tx := mempool[hex.EncodeToString(txID)]
-	addLog("Receiving init vote for Transaction #"+hex.EncodeToString(txID))
+	addLog("Transaction # "+hex.EncodeToString(txID)+" : Voting handled!")
 	addcsvLog(hex.EncodeToString(txID)+ " , " + "REC_INIT")
 	if er!=nil{
 		if bc.VerifyTransaction(&tx){
@@ -364,7 +364,7 @@ func handleInitVote(request []byte, bc *Blockchain) {
 		}
 	}
 	// Send the vote
-	SendVote(selfID, txID, true)
+	//SendVote(selfID, txID, true)
 }
 
 func sendTallyResult(res *TallyResult){
@@ -394,13 +394,13 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 			UTXOSet.Reindex()
 			fmt.Printf("New block %x is created\n",newBlock.Hash)
 			for _,tx := range txs{
-				addLog("Transaction #"+hex.EncodeToString(tx.ID)+" has been accepted!")
+				addLog("Transaction # "+hex.EncodeToString(tx.ID)+" : Accepted!")
 				addcsvLog(hex.EncodeToString(tx.ID)+ " , " + "ACC")
 			}
 		}
 	}	else{
 		fmt.Printf("Transaction %s rejected!\n",hex.EncodeToString(payload.ID))
-		addLog("Transaction #"+hex.EncodeToString(payload.ID)+" has been rejected!")
+		addLog("Transaction # "+hex.EncodeToString(payload.ID)+" : Rejected!")
 		addcsvLog(hex.EncodeToString(payload.ID)+ " , " + "REJ")
 	}
 	// Delete the transaction from memory after voting is done
@@ -460,7 +460,7 @@ func handleVote(request []byte, bc * Blockchain){
 			// Remove from pool, free up memory
 			delete(votePool, txid_str)
 			// Do the transaction deletion here
-			addLog("Transaction #"+txid_str+" has been rejected!")
+			addLog("Transaction # "+txid_str+" : Rejected!")
 			addcsvLog(txid_str+ " , " + "REJ")
 		}
 		// Update Pool
@@ -497,7 +497,7 @@ func handleTx(request []byte, bc *Blockchain) {
 		} else{
 			//fmt.Printf(tx.String())
 			//  check with other nodes whether transaction is valid
-			addLog("Requesting vote for Transaction #"+hex.EncodeToString(tx.ID))
+			addLog("Transaction # "+hex.EncodeToString(tx.ID)+" : Voting requested")
 			addcsvLog(hex.EncodeToString(tx.ID)+ " , " + "REQ")
 			sendRequestVote(&tx)
 			return
