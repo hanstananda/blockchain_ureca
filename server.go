@@ -216,7 +216,7 @@ func SendTxs(bc *Blockchain){
 		//fmt.Println(tx)
 		sendTx(tx)
 		//fmt.Println("Sent tx command")
-		r := rand.Intn(5)+2
+		r := rand.Intn(3)+2
 		if isNotary(selfID){ // Notary node, just give small delays between transastion sync
 			time.Sleep(time.Duration(r) * time.Millisecond * 10)
 		} else {
@@ -359,12 +359,14 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	if er!=nil{
 		if bc.VerifyTransaction(&tx){
 			SendVote(selfID, txID, true)
+			return
 		} else{
 			SendVote(selfID, txID, false)
+			return
 		}
 	}
-	// Send the vote
-	//SendVote(selfID, txID, true)
+	// Transaction is already in blockchain, vote as accepted
+	SendVote(selfID, txID, true)
 }
 
 func sendTallyResult(res *TallyResult){
