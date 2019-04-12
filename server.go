@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"time"
@@ -134,6 +135,7 @@ func sendTx(tnx *Transaction) {
 	payload := gobEncode(data)
 	request := append(commandToBytes("tx"), payload...)
 	sendData(request)
+	fmt.Println("Sent tx command")
 }
 
 func SendID(){
@@ -141,6 +143,7 @@ func SendID(){
 	payload := gobEncode(data)
 	request := append(commandToBytes("syn"), payload...)
 	sendData(request)
+	fmt.Println("Sent syn command")
 }
 
 func handleID(request []byte, bc *Blockchain){
@@ -151,14 +154,15 @@ func handleID(request []byte, bc *Blockchain){
 	err := dec.Decode(&payload)
 	check(err)
 	SendTxs(bc)
-	SendSyncBack()
+	SendSyncBack(payload.Address)
 }
 
-func SendSyncBack(){
-	data := Syn{nodeAddress}
+func SendSyncBack(destAddress string){
+	data := Syn{destAddress}
 	payload := gobEncode(data)
 	request := append(commandToBytes("syn-b"), payload...)
 	sendData(request)
+	fmt.Println("Sent syn-b command")
 }
 
 func handleSynBack(request []byte, bc *Blockchain){
@@ -168,7 +172,10 @@ func handleSynBack(request []byte, bc *Blockchain){
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
 	check(err)
-	SendTxs(bc)
+	if payload.Address== nodeAddress{
+		fmt.Println("Initiating synchronization...")
+		SendTxs(bc)
+	}
 }
 
 func SendVote(nodeID string,ID []byte, result bool){
@@ -182,6 +189,7 @@ func SendVote(nodeID string,ID []byte, result bool){
 	request := append(commandToBytes("vote"), payload...)
 	//fmt.Println(request)
 	sendData(request)
+	fmt.Println("Sent vote command")
 }
 
 func SendTxs(bc *Blockchain){
@@ -207,8 +215,14 @@ func SendTxs(bc *Blockchain){
 		// send the transactions to all parties in the group
 		//fmt.Println(tx)
 		sendTx(tx)
+		//fmt.Println("Sent tx command")
+		r := rand.Intn(10)
+		if isNotary(selfID){ // Notary node, just give small delays between transastion sync
+			time.Sleep(time.Duration(r) * time.Millisecond * 10)
+		} else {
+			time.Sleep(time.Duration(r) * time.Second)
+		}
 	}
-
 }
 
 // StartServer starts a node
@@ -264,7 +278,7 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 		case "tally":
 			handleTallyResult(request,bc)
 		case "syn":
-			handleID(request, bc)
+			go handleID(request, bc)
 		case "syn-b":
 		default:
 			fmt.Println("Unknown command!")
@@ -282,7 +296,7 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 		handleTallyResult(request,bc)
 	case "syn":
 	case "syn-b":
-		handleSynBack(request, bc)
+		go handleSynBack(request, bc)
 	default:
 		fmt.Println("Unknown command!")
 	}
@@ -295,6 +309,7 @@ func sendRequestVote(tx *Transaction){
 	payload := gobEncode(data)
 	request := append(commandToBytes("rv"), payload...)
 	sendData(request)
+	fmt.Println("Sent rv command")
 }
 
 func handleRequestVote(request []byte, bc *Blockchain) {
@@ -326,6 +341,7 @@ func sendInitVote(tx *Transaction){
 	payload := gobEncode(data)
 	request := append(commandToBytes("iv"), payload...)
 	sendData(request)
+	fmt.Println("Sent iv command")
 }
 
 func handleInitVote(request []byte, bc *Blockchain) {
@@ -355,6 +371,7 @@ func sendTallyResult(res *TallyResult){
 	payload := gobEncode(res)
 	request := append(commandToBytes("tally"), payload...)
 	sendData(request)
+	fmt.Println("Sent tally command")
 }
 
 func handleTallyResult(request []byte, bc *Blockchain) {
@@ -487,9 +504,9 @@ func handleTx(request []byte, bc *Blockchain) {
 		}
 	}
 
-	//cbTx := NewCoinbaseTX(miningAddress, "")
-	// txs = append(txs, cbTx)
+	// Transaction already in DB, just return
 	if len(txs) == 0 {
+		fmt.Println("No changes found!")
 		return
 	}
 	newBlock := bc.NewBlock(txs)

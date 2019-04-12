@@ -28,7 +28,7 @@ export NODE_ID=3001
 send_repeat = "./blockchain_ureca send -from 13L7UYXjUCGUUKF5o4oExDFQnV6p3AkDoB " \
               "-to 1B84VWxLDwk2BBLnEhQioV1ZNJxxFmHpdA -amount 1\n"
 
-for i in range(10):
+for i in range(100):
     commands_node1 += send_repeat
 
 # print(commands_node1)
