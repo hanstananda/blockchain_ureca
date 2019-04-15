@@ -331,7 +331,7 @@ func handleRequestVote(request []byte, bc *Blockchain) {
 		val.Nodes = make(map[string]bool)
 		votePool[txid_str]= val
 		addLog("Transaction # "+txid_str+" : Voting initialized!")
-		addcsvLog(txid_str+ " , " + "INIT")
+		addcsvLog(txid_str+ "," + "INIT")
 	}
 }
 
@@ -355,7 +355,7 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	_, er := bc.FindTransaction(txID)
 	tx := mempool[hex.EncodeToString(txID)]
 	addLog("Transaction # "+hex.EncodeToString(txID)+" : Voting handled!")
-	addcsvLog(hex.EncodeToString(txID)+ " , " + "REC_INIT")
+	addcsvLog(hex.EncodeToString(txID)+ "," + "REC_INIT")
 	if er!=nil{
 		if bc.VerifyTransaction(&tx){
 			SendVote(selfID, txID, true)
@@ -397,13 +397,13 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 			fmt.Printf("New block %x is created\n",newBlock.Hash)
 			for _,tx := range txs{
 				addLog("Transaction # "+hex.EncodeToString(tx.ID)+" : Accepted!")
-				addcsvLog(hex.EncodeToString(tx.ID)+ " , " + "ACC")
+				addcsvLog(hex.EncodeToString(tx.ID)+ "," + "ACC")
 			}
 		}
 	}	else{
 		fmt.Printf("Transaction %s rejected!\n",hex.EncodeToString(payload.ID))
 		addLog("Transaction # "+hex.EncodeToString(payload.ID)+" : Rejected!")
-		addcsvLog(hex.EncodeToString(payload.ID)+ " , " + "REJ")
+		addcsvLog(hex.EncodeToString(payload.ID)+ "," + "REJ")
 	}
 	// Delete the transaction from memory after voting is done
 	delete(mempool, hex.EncodeToString(payload.ID))
@@ -463,7 +463,7 @@ func handleVote(request []byte, bc * Blockchain){
 			delete(votePool, txid_str)
 			// Do the transaction deletion here
 			addLog("Transaction # "+txid_str+" : Rejected!")
-			addcsvLog(txid_str+ " , " + "REJ")
+			addcsvLog(txid_str+ "," + "REJ")
 		}
 		// Update Pool
 		votePool[txid_str] = val
@@ -500,7 +500,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			//fmt.Printf(tx.String())
 			//  check with other nodes whether transaction is valid
 			addLog("Transaction # "+hex.EncodeToString(tx.ID)+" : Voting requested")
-			addcsvLog(hex.EncodeToString(tx.ID)+ " , " + "REQ")
+			addcsvLog(hex.EncodeToString(tx.ID)+ "," + "REQ")
 			sendRequestVote(&tx)
 			return
 		}
@@ -532,7 +532,7 @@ func addLog(output string) {
 func addcsvLog(output string) {
 	f, err := os.OpenFile(("server_log/"+selfID+".csv"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	check(err)
-	output = gettime() + " , " +output+"\n"
+	output = gettime() + "," +output+"\n"
 	_,err = f.WriteString(output)
 	check(err)
 	err = f.Close()
@@ -541,5 +541,5 @@ func addcsvLog(output string) {
 
 func gettime() string{
 	dt := time.Now()
-	return dt.Format("01-02-2006 15:04:05.000000000")
+	return dt.Format("01-02-2006 15:04:05.000000")
 }
