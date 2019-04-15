@@ -29,7 +29,7 @@ var target_group = ""
 
 func check(err error) {
 	if err != nil {
-		panic(err)
+		addLog(err.Error())
 	}
 }
 
@@ -530,10 +530,17 @@ func addLog(output string) {
 }
 
 func addcsvLog(output string) {
-	f, err := os.OpenFile(("server_log/"+selfID+".csv"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	check(err)
+	filename := "server_log/"+selfID+".csv"
+	var f *os.File;
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		f, err = os.OpenFile((filename), os.O_CREATE|os.O_WRONLY, 0644)
+		check(err)
+	}	else{
+		f, err = os.OpenFile((filename), os.O_APPEND, 0644)
+		check(err)
+	}
 	output = gettime() + "," +output+"\n"
-	_,err = f.WriteString(output)
+	_,err := f.WriteString(output)
 	check(err)
 	err = f.Close()
 	check(err)
