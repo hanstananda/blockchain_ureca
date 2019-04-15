@@ -216,7 +216,7 @@ func SendTxs(bc *Blockchain){
 		//fmt.Println(tx)
 		sendTx(tx)
 		//fmt.Println("Sent tx command")
-		r := rand.Intn(3)+2
+		r := rand.Intn(1)+1
 		if isNotary(selfID){ // Notary node, just give small delays between transastion sync
 			time.Sleep(time.Duration(r) * time.Millisecond * 10)
 		} else {
@@ -534,9 +534,10 @@ func addcsvLog(output string) {
 	var f *os.File;
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		f, err = os.OpenFile((filename), os.O_CREATE|os.O_WRONLY, 0644)
+		_,err := f.WriteString("Datetime,Transaction ID,Status\n")
 		check(err)
 	}	else{
-		f, err = os.OpenFile((filename), os.O_APPEND, 0644)
+		f, err = os.OpenFile((filename), os.O_APPEND|os.O_WRONLY, 0644)
 		check(err)
 	}
 	output = gettime() + "," +output+"\n"
