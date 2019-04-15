@@ -121,7 +121,7 @@ func sendData(data []byte) {
 	addr, err := net.ResolveUDPAddr(protocol, target_group)
 	conn, err := net.DialUDP(protocol,nil, addr)
 	if err != nil {
-		fmt.Printf("%s is not available\n", addr)
+		//fmt.Printf("%s is not available\n", addr)
 		return
 	}
 	defer conn.Close()
@@ -135,7 +135,7 @@ func sendTx(tnx *Transaction) {
 	payload := gobEncode(data)
 	request := append(commandToBytes("tx"), payload...)
 	sendData(request)
-	fmt.Println("Sent tx command")
+	//fmt.Println("Sent tx command")
 }
 
 func SendID(){
@@ -143,7 +143,7 @@ func SendID(){
 	payload := gobEncode(data)
 	request := append(commandToBytes("syn"), payload...)
 	sendData(request)
-	fmt.Println("Sent syn command")
+	//fmt.Println("Sent syn command")
 }
 
 func handleID(request []byte, bc *Blockchain){
@@ -162,7 +162,7 @@ func SendSyncBack(destAddress string){
 	payload := gobEncode(data)
 	request := append(commandToBytes("syn-b"), payload...)
 	sendData(request)
-	fmt.Println("Sent syn-b command")
+	//fmt.Println("Sent syn-b command")
 }
 
 func handleSynBack(request []byte, bc *Blockchain){
@@ -173,7 +173,7 @@ func handleSynBack(request []byte, bc *Blockchain){
 	err := dec.Decode(&payload)
 	check(err)
 	if payload.Address== nodeAddress{
-		fmt.Println("Initiating synchronization...")
+		//fmt.Println("Initiating synchronization...")
 		SendTxs(bc)
 	}
 }
@@ -189,7 +189,7 @@ func SendVote(nodeID string,ID []byte, result bool){
 	request := append(commandToBytes("vote"), payload...)
 	//fmt.Println(request)
 	sendData(request)
-	fmt.Println("Sent vote command")
+	//fmt.Println("Sent vote command")
 }
 
 func SendTxs(bc *Blockchain){
@@ -263,7 +263,7 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 	//}
 	request := b
 	command := bytesToCommand(request[:commandLength])
-	fmt.Printf("Received %s command\n", command)
+	//fmt.Printf("Received %s command\n", command)
 	//log.Println(request)  // hard debug
 
 	if isNotary(selfID)==true{
@@ -281,7 +281,7 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 			go handleID(request, bc)
 		case "syn-b":
 		default:
-			fmt.Println("Unknown command!")
+			//fmt.Println("Unknown command!")
 		}
 		return
 	}
@@ -298,7 +298,7 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 	case "syn-b":
 		go handleSynBack(request, bc)
 	default:
-		fmt.Println("Unknown command!")
+		//fmt.Println("Unknown command!")
 	}
 }
 
@@ -309,7 +309,7 @@ func sendRequestVote(tx *Transaction){
 	payload := gobEncode(data)
 	request := append(commandToBytes("rv"), payload...)
 	sendData(request)
-	fmt.Println("Sent rv command")
+	//fmt.Println("Sent rv command")
 }
 
 func handleRequestVote(request []byte, bc *Blockchain) {
@@ -341,7 +341,7 @@ func sendInitVote(tx *Transaction){
 	payload := gobEncode(data)
 	request := append(commandToBytes("iv"), payload...)
 	sendData(request)
-	fmt.Println("Sent iv command")
+	//fmt.Println("Sent iv command")
 }
 
 func handleInitVote(request []byte, bc *Blockchain) {
@@ -373,7 +373,7 @@ func sendTallyResult(res *TallyResult){
 	payload := gobEncode(res)
 	request := append(commandToBytes("tally"), payload...)
 	sendData(request)
-	fmt.Println("Sent tally command")
+	//fmt.Println("Sent tally command")
 }
 
 func handleTallyResult(request []byte, bc *Blockchain) {
@@ -386,7 +386,7 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 	if payload.Result ==true{
 		// Transaction is accepted by all majority, put in blockchain
 		_,err1 := bc.FindTransaction(payload.ID)
-		fmt.Printf("Transaction %s accepted!\n",hex.EncodeToString(payload.ID))
+		//fmt.Printf("Transaction %s accepted!\n",hex.EncodeToString(payload.ID))
 		if err1 != nil {
 			var txs []*Transaction
 			tx := mempool[hex.EncodeToString(payload.ID)]
@@ -401,7 +401,7 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 			}
 		}
 	}	else{
-		fmt.Printf("Transaction %s rejected!\n",hex.EncodeToString(payload.ID))
+		//fmt.Printf("Transaction %s rejected!\n",hex.EncodeToString(payload.ID))
 		addLog("Transaction # "+hex.EncodeToString(payload.ID)+" : Rejected!")
 		addcsvLog(hex.EncodeToString(payload.ID)+ "," + "REJ")
 	}
@@ -439,7 +439,7 @@ func handleVote(request []byte, bc * Blockchain){
 			log.Fatal(err)
 		}
 		if val.Yes> numNodes/2+1 {
-			fmt.Printf("Transaction %s accepted!\n", txid_str)
+			//fmt.Printf("Transaction %s accepted!\n", txid_str)
 			res := TallyResult{
 				ID: txid,
 				Yes: val.Yes,
@@ -451,7 +451,7 @@ func handleVote(request []byte, bc * Blockchain){
 			delete(votePool, txid_str)
 			// Do the acceptance here
 		}	else if(val.Yes + val.No == numNodes)		{
-			fmt.Printf("Transaction %s rejected!\n",txid_str)
+			//fmt.Printf("Transaction %s rejected!\n",txid_str)
 			res := TallyResult{
 				ID: txid,
 				Yes: val.Yes,
@@ -508,7 +508,7 @@ func handleTx(request []byte, bc *Blockchain) {
 
 	// Transaction already in DB, just return
 	if len(txs) == 0 {
-		fmt.Println("No changes found!")
+		//fmt.Println("No changes found!")
 		return
 	}
 	newBlock := bc.NewBlock(txs)
