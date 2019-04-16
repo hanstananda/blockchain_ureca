@@ -438,7 +438,7 @@ func handleVote(request []byte, bc * Blockchain){
 		if err != nil {
 			log.Fatal(err)
 		}
-		if val.Yes> numNodes/2+1 {
+		if val.Yes>= numNodes/2+1 {
 			//fmt.Printf("Transaction %s accepted!\n", txid_str)
 			res := TallyResult{
 				ID: txid,
@@ -450,7 +450,7 @@ func handleVote(request []byte, bc * Blockchain){
 			// Remove from pool, free up memory
 			delete(votePool, txid_str)
 			// Do the acceptance here
-		}	else if(val.Yes + val.No == numNodes)		{
+		}	else if(val.No>= numNodes/2+1 || val.Yes + val.No == numNodes)		{
 			//fmt.Printf("Transaction %s rejected!\n",txid_str)
 			res := TallyResult{
 				ID: txid,
@@ -468,8 +468,8 @@ func handleVote(request []byte, bc * Blockchain){
 		// Update Pool
 		votePool[txid_str] = val
 	}	else{
-		// VotePool not initialized, initvote is not called before voting commences
-		log.Fatal(ok)
+		// Either voting already finished or not yet initialized
+		addLog("Transaction # "+txid_str+" : Stale vote received!")
 	}
 
 }
