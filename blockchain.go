@@ -272,17 +272,22 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 	if tx.IsCoinbase() {
 		return true
 	}
-
-	prevTXs := make(map[string]Transaction)
-
 	for _, vin := range tx.Vin {
-		prevTX, err := bc.FindTransaction(vin.Txid)
+		_, err := bc.FindTransaction(vin.Txid)
 		if err != nil {
-			//log.Panic(err)
 			return false
 		}
-		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
 	}
+	return true
+	//prevTXs := make(map[string]Transaction)
+	//
+	//for _, vin := range tx.Vin {
+	//	prevTX, err := bc.FindTransaction(vin.Txid)
+	//	if err != nil {
+	//		//log.Panic(err)
+	//		return false
+	//	}
+	//	prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	//}
 	//fmt.Println(prevTXs)
-	return tx.Verify(prevTXs)
 }

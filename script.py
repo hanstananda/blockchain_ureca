@@ -33,6 +33,8 @@ for i in range(5000):
         print(i)
     commands_node1 += send_repeat
 
+# commands_node1 += "./blockchain_ureca startnode -port 9090\n"
+
 # print(commands_node1)
 
 process_node1 = subprocess.Popen('/bin/bash', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
