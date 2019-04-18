@@ -8,7 +8,7 @@ ls | grep -P "^blockchain_[0-9]{4}.db" | xargs -d "\\n" rm
 export NODE_ID=3000
 echo $NODE_ID
 ./blockchain_ureca createblockchain -address 1DAP5SpEFRuqUacbXFzsAjUFG3FPeQzDim
-./blockchain_ureca generate -to 13L7UYXjUCGUUKF5o4oExDFQnV6p3AkDoB -amount 10000
+./blockchain_ureca generate -to 13L7UYXjUCGUUKF5o4oExDFQnV6p3AkDoB -amount 10000 -offline
 cp blockchain_3000.db blockchain_3001.db
 cp blockchain_3000.db blockchain_3002.db
 cp blockchain_3000.db blockchain_3003.db
