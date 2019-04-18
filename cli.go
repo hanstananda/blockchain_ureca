@@ -60,6 +60,7 @@ func (cli *CLI) Run() {
 	generateTo := generateCmd.String("to","","Destination wallet address")
 	generateAmount := generateCmd.Int("amount", 0, "Amount to generate")
 	portUDP := startNodeCmd.String("port", "", "Target port")
+	offlineGenerate := generateCmd.Bool("offline",false, "Offline generation")
 
 	switch os.Args[1] {
 	case "getbalance":
@@ -158,7 +159,7 @@ func (cli *CLI) Run() {
 			generateCmd.Usage()
 			os.Exit(1)
 		}
-		cli.generate(*generateTo,*generateAmount,nodeID)
+		cli.generate(*generateTo,*generateAmount,nodeID, *offlineGenerate)
 	}
 
 	if startNodeCmd.Parsed() {
