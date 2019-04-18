@@ -360,23 +360,18 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	addLog("Transaction # "+hex.EncodeToString(payload.TxID)+" : Init Vote Start!")
 	addcsvLog(hex.EncodeToString(payload.TxID)+ "," + "IVS")
 	txID := payload.TxID
-	_, er := bc.FindTransaction(txID)
+	//_, er := bc.FindTransaction(txID)
 	tx := mempool[hex.EncodeToString(txID)]
 	addLog("Transaction # "+hex.EncodeToString(txID)+" : Voting handled!")
 	addcsvLog(hex.EncodeToString(txID)+ "," + "REC_INIT")
-	if er!=nil{
-		if bc.VerifyTransaction(&tx){
-			SendVote(selfID, txID, true)
-			return
-		} else{
-			SendVote(selfID, txID, false)
-			return
-		}
+	if bc.VerifyTransaction(&tx){
+		SendVote(selfID, txID, true)
+	} else{
+		SendVote(selfID, txID, false)
 	}
-	// Transaction is already in blockchain, vote as accepted
-	SendVote(selfID, txID, true)
 	addLog("Transaction # "+hex.EncodeToString(payload.TxID)+" : Init Vote End!")
 	addcsvLog(hex.EncodeToString(payload.TxID)+ "," + "IVE")
+	return
 }
 
 func sendTallyResult(res *TallyResult){
@@ -397,17 +392,15 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 	addcsvLog(hex.EncodeToString(payload.ID)+ "," + "TRS")
 	if payload.Result ==true{
 		// Transaction is accepted by all majority, put in blockchain
-		_,err1 := bc.FindTransaction(payload.ID)
+		//_,err1 := bc.FindTransaction(payload.ID)
 		//fmt.Printf("Transaction %s accepted!\n",hex.EncodeToString(payload.ID))
-		if err1 != nil {
-			tx := mempool[hex.EncodeToString(payload.ID)]
-			txid_str := hex.EncodeToString(tx.ID)
-			valid_mempool[txid_str] = tx
-			delete(mempool, txid_str)
-			addLog("Transaction # "+hex.EncodeToString(tx.ID)+" : Accepted!")
-			addcsvLog(hex.EncodeToString(tx.ID)+ "," + "ACC")
-			go handleValid(bc)
-		}
+		tx := mempool[hex.EncodeToString(payload.ID)]
+		txid_str := hex.EncodeToString(tx.ID)
+		valid_mempool[txid_str] = tx
+		delete(mempool, txid_str)
+		addLog("Transaction # "+hex.EncodeToString(tx.ID)+" : Accepted!")
+		addcsvLog(hex.EncodeToString(tx.ID)+ "," + "ACC")
+		go handleValid(bc)
 	}	else{
 		//fmt.Printf("Transaction %s rejected!\n",hex.EncodeToString(payload.ID))
 		addLog("Transaction # "+hex.EncodeToString(payload.ID)+" : Rejected!")
