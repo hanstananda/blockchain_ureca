@@ -511,7 +511,7 @@ func handleTx(request []byte, bc *Blockchain) {
 
 func handleValid(bc *Blockchain) {
 	var txs []*Transaction
-	if len(valid_mempool) >= 3 {
+	if len(valid_mempool) >= 10 {
 		for id := range valid_mempool {
 			tx := valid_mempool[id]
 			txs = append(txs, &tx)

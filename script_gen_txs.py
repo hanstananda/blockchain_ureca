@@ -23,10 +23,11 @@ addresses = [
 send_repeat = "./blockchain_ureca generate -amount 1 -to "
 
 for t in range(100):
+    print("t: ",t)
     for i in range(len(addresses)):
         commands_node1 = "export NODE_ID=3002\n"
-        if i % 100 == 0:
-            print(i)
+        if i % 100 == 0 and i>0:
+            print("i: ", i)
         commands_node1 += send_repeat + addresses[i] + '\n'
         process_node1 = subprocess.Popen('/bin/bash', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = process_node1.communicate(commands_node1.encode('utf-8'))
