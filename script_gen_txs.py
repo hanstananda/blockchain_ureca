@@ -31,7 +31,7 @@ for t in range(100):
         commands_node1 += send_repeat + addresses[i] + '\n'
         process_node1 = subprocess.Popen('/bin/bash', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = process_node1.communicate(commands_node1.encode('utf-8'))
-        time.sleep(0.5)
+        time.sleep(1)
 
 # commands_node1 += "./blockchain_ureca startnode -port 9090\n"
 

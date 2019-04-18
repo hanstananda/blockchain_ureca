@@ -357,6 +357,8 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
 	check(err)
+	addLog("Transaction # "+hex.EncodeToString(payload.TxID)+" : Init Vote Start!")
+	addcsvLog(hex.EncodeToString(payload.TxID)+ "," + "IVS")
 	txID := payload.TxID
 	_, er := bc.FindTransaction(txID)
 	tx := mempool[hex.EncodeToString(txID)]
@@ -373,6 +375,8 @@ func handleInitVote(request []byte, bc *Blockchain) {
 	}
 	// Transaction is already in blockchain, vote as accepted
 	SendVote(selfID, txID, true)
+	addLog("Transaction # "+hex.EncodeToString(payload.TxID)+" : Init Vote End!")
+	addcsvLog(hex.EncodeToString(payload.TxID)+ "," + "IVE")
 }
 
 func sendTallyResult(res *TallyResult){
@@ -389,6 +393,8 @@ func handleTallyResult(request []byte, bc *Blockchain) {
 	dec := gob.NewDecoder(&buff)
 	err := dec.Decode(&payload)
 	check(err)
+	addLog("Transaction # "+hex.EncodeToString(payload.ID)+" : Tally Result Start!")
+	addcsvLog(hex.EncodeToString(payload.ID)+ "," + "TRS")
 	if payload.Result ==true{
 		// Transaction is accepted by all majority, put in blockchain
 		_,err1 := bc.FindTransaction(payload.ID)
