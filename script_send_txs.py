@@ -26,6 +26,16 @@ addresses = [
 send_repeat = ["./blockchain_ureca send -from ",
                " -amount 1 -to "]
 
+
+def copy_db():
+    commands = "export NODE_ID=3002\n"
+    if i % 100 == 0 and i > 0:
+        print("i: ", i)
+    commands += "cp blockchain_3000.db blockchain_3002.db" + '\n'
+    process_node = subprocess.Popen('/bin/bash', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    process_node.communicate(commands.encode('utf-8'))
+
+
 for t in range(100):
     print("t: ", t)
     for i in range(10):
@@ -36,7 +46,13 @@ for t in range(100):
         process_node1 = subprocess.Popen('/bin/bash', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = process_node1.communicate(commands_node1.encode('utf-8'))
         time.sleep(1)
+    # Make sure the new txs has been put into database
+    time.sleep(1)
+    copy_db()
     time.sleep(0.5)
+
+
+
 
 # commands_node1 += "./blockchain_ureca startnode -port 9090\n"
 
