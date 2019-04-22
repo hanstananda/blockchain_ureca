@@ -36,7 +36,7 @@ def copy_db():
     process_node.communicate(commands.encode('utf-8'))
 
 
-for t in range(100):
+for t in range(10000):
     print("t: ", t)
     for i in range(10):
         commands_node1 = "export NODE_ID=3002\n"

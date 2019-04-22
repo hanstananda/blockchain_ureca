@@ -157,6 +157,7 @@ func handleID(request []byte, bc *Blockchain){
 	check(err)
 	SendTxs(bc)
 	SendSyncBack(payload.Address)
+	fmt.Println("Sync done!")
 }
 
 func SendSyncBack(destAddress string){
@@ -178,6 +179,7 @@ func handleSynBack(request []byte, bc *Blockchain){
 		//fmt.Println("Initiating synchronization...")
 		SendTxs(bc)
 	}
+	fmt.Println("Sync done!")
 }
 
 func SendVote(nodeID string,ID []byte, result bool){
@@ -266,7 +268,7 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 	//}
 	request := b
 	command := bytesToCommand(request[:commandLength])
-	fmt.Printf("Received %s command\n", command)
+	//fmt.Printf("Received %s command\n", command)
 	//log.Println(request)  // hard debug
 
 	if isNotary(selfID)==true{

@@ -4,7 +4,6 @@ from timeit import default_timer as timer
 start = timer()
 
 addresses = [
-    '13L7UYXjUCGUUKF5o4oExDFQnV6p3AkDoB',
     '13XfCX8bLpdu8YgnXPD4BDeBC5RyvqBfPh',
     '14L3zLQWPiXM6hZXdfmgjET8crM52VJpXX',
     '1C4tyo8poeG1uFioZjtgnLZKotEUZFJyVh',
@@ -25,7 +24,7 @@ echo $NODE_ID
 ./blockchain_ureca createblockchain -address 1DAP5SpEFRuqUacbXFzsAjUFG3FPeQzDim
 '''
 
-commands_generate = './blockchain_ureca generate -amount 10000 -offline -to '
+commands_generate = './blockchain_ureca generate -amount 200000 -offline -to '
 
 commands_copy = '''
 cp blockchain_3000.db blockchain_3001.db
