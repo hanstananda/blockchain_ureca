@@ -4,24 +4,26 @@ from timeit import default_timer as timer
 start = timer()
 
 addresses = [
-    '13XfCX8bLpdu8YgnXPD4BDeBC5RyvqBfPh',
-    '14L3zLQWPiXM6hZXdfmgjET8crM52VJpXX',
-    '1C4tyo8poeG1uFioZjtgnLZKotEUZFJyVh',
-    '18Nt9jiYVjm2TxCTHNSeYquriaauh5wfux',
-    '16uqNuajndwknbHSQw1cfTvSgsXxa5Vxi8',
-    '1AqNL5SPcuWqUT1SjTEQ3WGDLfy47HK74c',
-    '17aju9bJh3G7xC9PAkQ1j5czizA31rN77S',
-    '1Ci67qmp8KerJA3zZhsDC7AcXz8RCZwbt',
-    '1MzLjrr737WtVpubSGxN6CUECBD2vnQqef',
-    '165KxLW2bFms5wtKs2sNQXfD8TLQrehGCT',
-    '14RJHhG374XyuTLfZ48qRxUdxRLWj3BcA7',
+'1N9skadjj8GZkUJkzCfEKwDCGJrt6cydsk',
+'15DAKLs5bkUmTWAhTwnpFBqnMfpdakBXoC',
+'141qmuD6Wh93Dg5vdqdDjGwTShuuiYBTZS',
+'19XaVuXCxykqivr6KjhqVy6pgzZH2YivNT',
+'1HiaSjZZoMP3s18edwWWZtwcs8QX2aZ9MK',
+'14b7CHfHyQi3xaiSnxKSw7QbY7byjLj58e',
+'1PcmXrssw54smjrfhuS1RufgNooYyBmEbv',
+'15HyA5Gg2xRpDQPqfoNwYQ1w9BBChggktn',
+'1QJ5P7B8F2PcYMYhaYtAXTJyzYzKdmzZTg',
+'13WiDjGU1G5ASQNFKyoBfpaBka2qgvanN6',
+'148Jd4NhdAxFz3GzKa4uSVeEXWjfoMrqxo',
+'1GkM5TRDe59j4N3qrM4FzEYoazbFPYMTPV',
+'121zhn7VbS9wcrikK5SN2JLhy4wUg6Luf9',
 ]
 
 commands_notary = '''
 del blockchain*.db
 set NODE_ID=3000
 echo %NODE_ID%
-blockchain_ureca.exe createblockchain -address 1DAP5SpEFRuqUacbXFzsAjUFG3FPeQzDim
+blockchain_ureca.exe createblockchain -address 121zhn7VbS9wcrikK5SN2JLhy4wUg6Luf9
 '''
 
 commands_generate = 'blockchain_ureca.exe generate -amount 200000 -offline -to '

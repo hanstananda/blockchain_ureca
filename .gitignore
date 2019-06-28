@@ -19,6 +19,7 @@ blockchain_ureca
 *.db
 !blockchain_genesis.db
 *.dat
+*.db.lock
 
 # Logs
 server_log/
