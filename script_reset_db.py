@@ -18,26 +18,27 @@ addresses = [
 ]
 
 commands_notary = '''
-ls | grep -P "^blockchain_[0-9]{4}.db" | xargs -d "\\n" rm
+del blockchain*.db
 set NODE_ID=3000
 echo %NODE_ID%
-blockchain_ureca.exe createblockchain.exe -address 1DAP5SpEFRuqUacbXFzsAjUFG3FPeQzDim
+blockchain_ureca.exe createblockchain -address 1DAP5SpEFRuqUacbXFzsAjUFG3FPeQzDim
 '''
 
 commands_generate = 'blockchain_ureca.exe generate -amount 200000 -offline -to '
 
 commands_copy = '''
-cp blockchain_3000.db blockchain_3001.db
-cp blockchain_3000.db blockchain_3002.db
-cp blockchain_3000.db blockchain_3003.db
+copy blockchain_3000.db blockchain_3001.db
+copy blockchain_3000.db blockchain_3002.db
+copy blockchain_3000.db blockchain_3003.db
 '''
 
 for i in range(len(addresses)):
     commands_notary += commands_generate + addresses[i] + '\n'
 
 commands_notary += commands_copy
+result = []
 
-process_notary = subprocess.Popen(commands_notary, shell=True, stdout=subprocess.PIPE)
-
-end = timer()
+process_notary = subprocess.Popen("cmd", shell=True ,stdin=subprocess.PIPE, stdout=subprocess.PIPE,   stderr=subprocess.PIPE)
+out, err = process_notary.communicate(commands_notary.encode('utf-8'))
+print (out.decode(encoding='windows-1252'))
 print(end-start)
