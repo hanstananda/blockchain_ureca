@@ -32,10 +32,11 @@ send_repeat = ["blockchain_ureca.exe send -from ",
 
 
 def copy_db():
+    # commands = "set NODE_ID=3002\n cd \"C:\\Users\\Hans Tananda\\GolandProjects\\blockchain_ureca \""
     commands = "set NODE_ID=3002\n"
     if i % 100 == 0 and i > 0:
         print("i: ", i)
-    commands += "copy blockchain_3000.db blockchain_3002.db" + '\n'
+    commands += "copy blockchain_3000.db blockchain_3002.db /Y" + '\n'
     process_node = subprocess.Popen("cmd", shell=True ,stdin=subprocess.PIPE, stdout=subprocess.PIPE,   stderr=subprocess.PIPE)
     process_node.communicate(commands.encode('utf-8'))
 
@@ -44,10 +45,10 @@ for t in range(1):
     print("t: ", t)
     for i in range(len(from_addresses)):
         commands_node1 = "set NODE_ID=3002\n"
-        # if i % 1 == 0 and i > 0:
+        # if i % 10 == 0 and i > 0:
         print("i: ", i)
-        commands_node1 += send_repeat[0] + from_addresses[i] + send_repeat[1] + addresses[9] + '\n'
-        print("commands_node1: ", commands_node1)
+        commands_node1 += send_repeat[0] + from_addresses[i] + send_repeat[1] + addresses[i] + '\n'
+        # print("commands_node1: ", commands_node1)
         process_node1 = subprocess.Popen("cmd", shell=True ,stdin=subprocess.PIPE, stdout=subprocess.PIPE,   stderr=subprocess.PIPE)
         out, err = process_node1.communicate(commands_node1.encode('utf-8'))
         time.sleep(1)
@@ -59,14 +60,14 @@ for t in range(1):
 
 
 
-# commands_node1 += "./blockchain_ureca startnode -port 9090\n"
+commands_node1 += "blockchain_ureca.exe startnode -port 9090\n"
 
 # print(commands_node1)
 
-process_node1 = subprocess.Popen('/bin/bash', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+process_node1 = subprocess.Popen('cmd', shell=True , stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 out, err = process_node1.communicate(commands_node1.encode('utf-8'))
 
-# print(out)
+print (out.decode(encoding='windows-1252'))
 
 end = timer()
 print(end-start)

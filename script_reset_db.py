@@ -21,6 +21,7 @@ addresses = [
 
 commands_notary = '''
 del blockchain*.db
+del blockchain*.db.lock
 set NODE_ID=3000
 echo %NODE_ID%
 blockchain_ureca.exe createblockchain -address 121zhn7VbS9wcrikK5SN2JLhy4wUg6Luf9
@@ -43,4 +44,5 @@ result = []
 process_notary = subprocess.Popen("cmd", shell=True ,stdin=subprocess.PIPE, stdout=subprocess.PIPE,   stderr=subprocess.PIPE)
 out, err = process_notary.communicate(commands_notary.encode('utf-8'))
 print (out.decode(encoding='windows-1252'))
+end = timer()
 print(end-start)
