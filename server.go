@@ -21,7 +21,7 @@ const maxDatagramSize = 8192
 var numNodes = 3
 var selfID = ""
 var nodeAddress string
-var addrUDP = "224.0.0.1"
+var addrUDP = "127.0.0.1"
 var NotaryNodes = []string{"3000"}
 var mempool = make(map[string]Transaction)
 var valid_mempool = make(map[string]Transaction)
@@ -269,7 +269,7 @@ func handleConnection(conn *net.UDPAddr, n int, b []byte, bc *Blockchain) {
 	request := b
 	command := bytesToCommand(request[:commandLength])
 	//fmt.Printf("Received %s command\n", command)
-	//log.Println(request)  // hard debug
+	log.Println(request)  // hard debug
 
 	if isNotary(selfID)==true{
 		switch command {
