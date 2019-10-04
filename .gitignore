@@ -6,6 +6,9 @@
 *.dylib
 blockchain_ureca
 
+# Source library
+src/
+
 # Test binary, build with `go test -c`
 *.test
 
